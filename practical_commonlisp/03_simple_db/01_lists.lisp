@@ -58,6 +58,41 @@
 (defun artist-selector (artist)
   #'(lambda (cd) (equal (getf cd :artist) artist)))
 
+;; abstract it with macro?
+(defun where (&key title artist rating (ripped nil ripped-p))
+  #'(lambda (cd)
+      (and
+        (if title    (equal (getf cd :title) title)   t)
+        (if artist   (equal (getf cd :artist) artist) t)
+        (if rating   (equal (getf cd :rating) rating) t)
+        (if ripped-p (equal (getf cd :ripped) ripped) t))))
+
+;; update with where clause
+(defun update (selector-fn &key title artist rating (ripped nil ripped-p))
+  (setf *db*
+        (mapcar 
+          #'(lambda (row)
+              (when (funcall selector-fn row)
+                (if title (setf (getf row :title) title))
+                (if artist (setf (getf row :artist) artist))
+                (if rating (setf (getf row :rating) rating))
+                (if ripped-p (setf (getf row :ripped) ripped)))
+              row) *db*)))
+
+;; remove
+(defun delete-rows (selector-fn)
+  (setf *db* (remove-if selector-fn *db*)))
+
+;; macro - 01 - reversing code
+(defmacro backwards (expr) (reverse expr))
+;; (backwards ("hello, world" t format))
+;; expands to:
+;; (format t "hello, world")
+;; outputs when evaluated: "hello, world"
+
+
+
+
 ;; keyword parameters - bind call args to corresponding values
 (defun foo (&key a b c) (list a b c))
 (foo :a 1 :c 3) ;; ==> (1 NIL 3) | NIL is bound to b, because no value was given for b
@@ -76,10 +111,9 @@
 
 ;; dump the db
 ; (dump-db)
-
+; (save-db "./cds.db")
+; (load-db "./cds.db")
 
 
 
 ;;;; Main
-; (add-cds)
-(save-db "./cds.db")
