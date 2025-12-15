@@ -59,13 +59,13 @@
   #'(lambda (cd) (equal (getf cd :artist) artist)))
 
 ;; abstract it with macro?
-(defun where (&key title artist rating (ripped nil ripped-p))
-  #'(lambda (cd)
-      (and
-        (if title    (equal (getf cd :title) title)   t)
-        (if artist   (equal (getf cd :artist) artist) t)
-        (if rating   (equal (getf cd :rating) rating) t)
-        (if ripped-p (equal (getf cd :ripped) ripped) t))))
+; (defun where (&key title artist rating (ripped nil ripped-p))
+;   #'(lambda (cd)
+;       (and
+;         (if title    (equal (getf cd :title) title)   t)
+;         (if artist   (equal (getf cd :artist) artist) t)
+;         (if rating   (equal (getf cd :rating) rating) t)
+;         (if ripped-p (equal (getf cd :ripped) ripped) t))))
 
 ;; update with where clause
 (defun update (selector-fn &key title artist rating (ripped nil ripped-p))
@@ -91,11 +91,34 @@
 ;; outputs when evaluated: "hello, world"
 
 
+;; (equal (getf cd field) value)
+(defun make-comparison-expr (field value)
+  `(equal (getf cd ,field) ,value))
+
+;; (make-comparison-expr :rating 10) => (equal (getf cd :rating) 10)
+
+(defun make-comparisons-list (fields)
+  (loop while fields
+        collecting (make-comparison-expr (pop fields) (pop fields))))
+
+;; (make-comparisons-list (list :rating 10 :title "Title")) 
+;;    => ((EQUAL (GETF CD :RATING) 10) (EQUAL (GETF CD :TITLE) "Title"))
+
+;; variant of , is ,@
+(defmacro where (&rest clauses)
+  `#'(lambda (cd) (and ,@(make-comparisons-list clauses))))
+
+'(where :title "Give Us a Break" :ripped t)
+;; ,@ kinda unwraps the following list
+;; `(and ,(list 1 2 3)) => (AND (1 2 3))
+;; `(and ,@(list 1 2 3)) => (AND 1 2 3)
+;; `(and ,@(list 1 2 3) 4)
+
 
 
 ;; keyword parameters - bind call args to corresponding values
-(defun foo (&key a b c) (list a b c))
-(foo :a 1 :c 3) ;; ==> (1 NIL 3) | NIL is bound to b, because no value was given for b
+; (defun foo (&key a b c) (list a b c))
+; (foo :a 1 :c 3) ;; ==> (1 NIL 3) | NIL is bound to b, because no value was given for b
 
 (defun foo (&key a (b 20) (c 30 c-p)) (list a b c c-p))
 (foo :a 1 :c 3) ;; ==> (1 20 3 T) | now b is 20 (default value)
